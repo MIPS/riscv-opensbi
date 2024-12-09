@@ -175,6 +175,7 @@ int aplic_cold_irqchip_init(struct aplic_data *aplic)
 	u32 i, j, tmp;
 	struct aplic_delegate_data *deleg;
 	u32 first_deleg_irq, last_deleg_irq;
+	static u32 num_irqchip = 0;
 
 	/* Sanity checks */
 	if (!aplic ||
@@ -280,7 +281,10 @@ int aplic_cold_irqchip_init(struct aplic_data *aplic)
 	}
 
 	/* Register irqchip device */
-	sbi_irqchip_add_device(&aplic_device);
+	if (num_irqchip == 0) {
+		sbi_irqchip_add_device(&aplic_device);
+	}
+	num_irqchip++;
 
 	return 0;
 }
