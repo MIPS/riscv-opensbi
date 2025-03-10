@@ -38,7 +38,9 @@ debugexc_vector:
 	li	x8, 0
 	li	x9, 0
 	li	x10, 0
+#ifdef FW_FDT_PATH
 	li	x11, 0
+#endif
 	li	x12, 0
 	li	x13, 0
 	li	x14, 0
