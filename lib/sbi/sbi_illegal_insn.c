@@ -10,6 +10,7 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_barrier.h>
 #include <sbi/riscv_encoding.h>
+#include <sbi/sbi_atomic.h>
 #include <sbi/sbi_bitops.h>
 #include <sbi/sbi_emulate_csr.h>
 #include <sbi/sbi_error.h>
@@ -18,6 +19,13 @@
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_unpriv.h>
 #include <sbi/sbi_console.h>
+
+#define OPCODE_MASK 0x0000007f
+#define AMO_OPCODE 0x0000002f
+#define WD_MASK 0x00007000
+#define WD_SHIFT 12
+#define AQRL_MASK 0x06000000
+#define AQRL_SHIFT 25
 
 typedef int (*illegal_insn_func)(ulong insn, struct sbi_trap_regs *regs);
 
@@ -146,6 +154,487 @@ static const illegal_insn_func illegal_insn_table[32] = {
 	truly_illegal_insn  /* 31 */
 };
 
+static int other_illegal_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	return illegal_insn_table[(insn & 0x7c) >> 2](insn, regs);
+}
+
+static const illegal_insn_func amoadd_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_add_w, /* 8 */
+	sbi_atomic_add_w_rl, /* 9 */
+	sbi_atomic_add_w_aq, /* 10 */
+	sbi_atomic_add_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_add_d, /* 12 */
+	sbi_atomic_add_d_rl, /* 13 */
+	sbi_atomic_add_d_aq, /* 14 */
+	sbi_atomic_add_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amoswap_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_swap_w, /* 8 */
+	sbi_atomic_swap_w_rl, /* 9 */
+	sbi_atomic_swap_w_aq, /* 10 */
+	sbi_atomic_swap_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_swap_d, /* 12 */
+	sbi_atomic_swap_d_rl, /* 13 */
+	sbi_atomic_swap_d_aq, /* 14 */
+	sbi_atomic_swap_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amoxor_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_xor_w, /* 8 */
+	sbi_atomic_xor_w_rl, /* 9 */
+	sbi_atomic_xor_w_aq, /* 10 */
+	sbi_atomic_xor_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_xor_d, /* 12 */
+	sbi_atomic_xor_d_rl, /* 13 */
+	sbi_atomic_xor_d_aq, /* 14 */
+	sbi_atomic_xor_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amoor_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_or_w, /* 8 */
+	sbi_atomic_or_w_rl, /* 9 */
+	sbi_atomic_or_w_aq, /* 10 */
+	sbi_atomic_or_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_or_d, /* 12 */
+	sbi_atomic_or_d_rl, /* 13 */
+	sbi_atomic_or_d_aq, /* 14 */
+	sbi_atomic_or_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amoand_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_and_w, /* 8 */
+	sbi_atomic_and_w_rl, /* 9 */
+	sbi_atomic_and_w_aq, /* 10 */
+	sbi_atomic_and_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_and_d, /* 12 */
+	sbi_atomic_and_d_rl, /* 13 */
+	sbi_atomic_and_d_aq, /* 14 */
+	sbi_atomic_and_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amomin_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_min_w, /* 8 */
+	sbi_atomic_min_w_rl, /* 9 */
+	sbi_atomic_min_w_aq, /* 10 */
+	sbi_atomic_min_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_min_d, /* 12 */
+	sbi_atomic_min_d_rl, /* 13 */
+	sbi_atomic_min_d_aq, /* 14 */
+	sbi_atomic_min_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amomax_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_max_w, /* 8 */
+	sbi_atomic_max_w_rl, /* 9 */
+	sbi_atomic_max_w_aq, /* 10 */
+	sbi_atomic_max_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_max_d, /* 12 */
+	sbi_atomic_max_d_rl, /* 13 */
+	sbi_atomic_max_d_aq, /* 14 */
+	sbi_atomic_max_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amominu_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_minu_w, /* 8 */
+	sbi_atomic_minu_w_rl, /* 9 */
+	sbi_atomic_minu_w_aq, /* 10 */
+	sbi_atomic_minu_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_minu_d, /* 12 */
+	sbi_atomic_minu_d_rl, /* 13 */
+	sbi_atomic_minu_d_aq, /* 14 */
+	sbi_atomic_minu_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static const illegal_insn_func amomaxu_table[32] = {
+	other_illegal_insn, /* 0 */
+	other_illegal_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	other_illegal_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	sbi_atomic_maxu_w, /* 8 */
+	sbi_atomic_maxu_w_rl, /* 9 */
+	sbi_atomic_maxu_w_aq, /* 10 */
+	sbi_atomic_maxu_w_aqrl, /* 11 */
+#if __riscv_xlen == 64
+	sbi_atomic_maxu_d, /* 12 */
+	sbi_atomic_maxu_d_rl, /* 13 */
+	sbi_atomic_maxu_d_aq, /* 14 */
+	sbi_atomic_maxu_d_aqrl, /* 15 */
+#else
+	other_illegal_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+#endif
+	other_illegal_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	other_illegal_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	other_illegal_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	other_illegal_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn, /* 31 */
+};
+
+static int amoadd_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amoadd_table[wd + aqrl](insn, regs);
+}
+
+static int amoswap_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amoswap_table[wd + aqrl](insn, regs);
+}
+
+static int amoxor_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amoxor_table[wd + aqrl](insn, regs);
+}
+
+static int amoor_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amoor_table[wd + aqrl](insn, regs);
+}
+
+static int amoand_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amoand_table[wd + aqrl](insn, regs);
+}
+
+static int amomin_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amomin_table[wd + aqrl](insn, regs);
+}
+
+static int amomax_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amomax_table[wd + aqrl](insn, regs);
+}
+
+static int amominu_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amominu_table[wd + aqrl](insn, regs);
+}
+
+static int amomaxu_insn(ulong insn, struct sbi_trap_regs *regs)
+{
+	int wd = ((insn & WD_MASK) >> WD_SHIFT) << 2;
+	int aqrl = (insn & AQRL_MASK) >> AQRL_SHIFT;
+	return amomaxu_table[wd + aqrl](insn, regs);
+}
+
+static const illegal_insn_func amo_insn_table[32] = {
+	amoadd_insn, /* 0 */
+	amoswap_insn, /* 1 */
+	other_illegal_insn, /* 2 */
+	other_illegal_insn, /* 3 */
+	amoxor_insn, /* 4 */
+	other_illegal_insn, /* 5 */
+	other_illegal_insn, /* 6 */
+	other_illegal_insn, /* 7 */
+	amoor_insn, /* 8 */
+	other_illegal_insn, /* 9 */
+	other_illegal_insn, /* 10 */
+	other_illegal_insn, /* 11 */
+	amoand_insn, /* 12 */
+	other_illegal_insn, /* 13 */
+	other_illegal_insn, /* 14 */
+	other_illegal_insn, /* 15 */
+	amomin_insn, /* 16 */
+	other_illegal_insn, /* 17 */
+	other_illegal_insn, /* 18 */
+	other_illegal_insn, /* 19 */
+	amomax_insn, /* 20 */
+	other_illegal_insn, /* 21 */
+	other_illegal_insn, /* 22 */
+	other_illegal_insn, /* 23 */
+	amominu_insn, /* 24 */
+	other_illegal_insn, /* 25 */
+	other_illegal_insn, /* 26 */
+	other_illegal_insn, /* 27 */
+	amomaxu_insn, /* 28 */
+	other_illegal_insn, /* 29 */
+	other_illegal_insn, /* 30 */
+	other_illegal_insn  /* 31 */
+};
+
 int sbi_illegal_insn_handler(struct sbi_trap_context *tcntx)
 {
 	struct sbi_trap_regs *regs = &tcntx->regs;
@@ -171,6 +660,9 @@ int sbi_illegal_insn_handler(struct sbi_trap_context *tcntx)
 		if ((insn & 3) != 3)
 			return truly_illegal_insn(insn, regs);
 	}
+
+	if ((insn & OPCODE_MASK) == AMO_OPCODE)
+		return amo_insn_table[(insn >> 27) & 0x1f](insn, regs);
 
 	return illegal_insn_table[(insn & 0x7c) >> 2](insn, regs);
 }
