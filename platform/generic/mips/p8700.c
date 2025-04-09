@@ -190,6 +190,70 @@ static int mips_early_init(bool cold_boot, const void *fdt,
 	return 0;
 }
 
+void mipstvec_handler_stw();
+static int mips_nascent_init(const struct fdt_match *match)
+{
+	u64 hartid = current_hartid();
+	u64 cm_base = CM_BASE;
+	int i;
+
+	/* Coherence enable for every core */
+	if (cpu_hart(hartid) == 0) {
+		cm_base += (cpu_core(hartid) << CM_BASE_CORE_SHIFT);
+		asm volatile("sd %0,0(%1)"::"r"(GCR_CORE_COH_EN_EN),
+			      "r"(cm_base + GCR_OFF_LOCAL + GCR_CORE_COH_EN));
+		asm volatile("fence");
+	}
+
+	/* Set up pmp for DRAM */
+	csr_write(CSR_PMPADDR14, DRAM_PMP_ADDR);
+	/* All from 0x0 */
+	csr_write(CSR_PMPADDR15, 0x1fffffffffffffff);
+	csr_write(CSR_PMPCFG2, ((PMP_A_NAPOT|PMP_R|PMP_W|PMP_X)<<56)|
+		  ((PMP_A_NAPOT|PMP_R|PMP_W|PMP_X)<<48));
+	/* Set cacheable for pmp6, uncacheable for pmp7 */
+	csr_write(CSR_PMACFG2, ((u64)CCA_CACHE_DISABLE << 56)|
+		  ((u64)CCA_CACHE_ENABLE << 48));
+	/* Reset pmpcfg0 */
+	csr_write(CSR_PMPCFG0, 0);
+	/* Reset pmacfg0 */
+	csr_write(CSR_PMACFG0, 0);
+	asm volatile("fence");
+
+	/* Per cluster set up */
+	if (cpu_core(hartid) == 0 && cpu_hart(hartid) == 0) {
+		/* Enable L2 prefetch */
+		asm volatile("sw %0,0(%1)"::"r"(0xfffff110),
+			      "r"(cm_base + L2_PFT_CONTROL_OFFSET));
+		asm volatile("sw %0,0(%1)"::"r"(0x15ff),
+			      "r"(cm_base + L2_PFT_CONTROL_B_OFFSET));
+	}
+
+	/* Per core set up */
+	if (cpu_hart(hartid) == 0) {
+		/* Enable load pair, store pair, and HTW */
+		csr_clear(CSR_MIPSCONFIG7, (1<<12)|(1<<13)|(1<<7));
+
+		/* Disable noRFO, misaligned load/store to have misaligned address exceptions */
+		csr_set(CSR_MIPSCONFIG7, (1<<25)|(1<<9));
+
+		/* Enable L1-D$ Prefetch */
+		csr_write(CSR_MIPSCONFIG11, 0xff);
+
+		for (i = 0; i < 8; i++) {
+			csr_set(CSR_MIPSCONFIG8, 4 + 0x100 * i);
+			csr_set(CSR_MIPSCONFIG9, 8);
+			asm volatile("fence");
+			asm volatile("fence.i");
+		}
+	}
+
+	/* Per hart set up */
+	csr_write(CSR_MIPSTVEC, mipstvec_handler_stw + 1);
+
+	return 0;
+}
+
 static const struct fdt_match mips_match[] = {
 	{ .compatible = "mips,boston" },
 	{ },
@@ -197,6 +261,7 @@ static const struct fdt_match mips_match[] = {
 
 const struct platform_override mips  = {
 	.match_table = mips_match,
+	.nascent_init = mips_nascent_init,
 	.early_init = mips_early_init,
 	.final_init = mips_final_init,
 };
