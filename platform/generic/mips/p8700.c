@@ -6,6 +6,8 @@
  */
 
 #include <platform_override.h>
+#include <sbi/riscv_barrier.h>
+#include <sbi/riscv_io.h>
 #include <sbi/sbi_domain.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_hsm.h>
@@ -201,9 +203,10 @@ static int mips_p8700_nascent_init(void)
 	/* Coherence enable for every core */
 	if (cpu_hart(hartid) == 0) {
 		cm_base += (cpu_core(hartid) << CM_BASE_CORE_SHIFT);
-		asm volatile("sd %0,0(%1)"::"r"(GCR_CORE_COH_EN_EN),
-			      "r"(cm_base + GCR_OFF_LOCAL + GCR_CORE_COH_EN));
-		asm volatile("fence");
+		__raw_writeq(GCR_CORE_COH_EN_EN,
+			     (void *)(cm_base + GCR_OFF_LOCAL +
+				      GCR_CORE_COH_EN));
+		mb();
 	}
 
 	/* Set up pmp for DRAM */
@@ -219,15 +222,15 @@ static int mips_p8700_nascent_init(void)
 	csr_write(CSR_PMPCFG0, 0);
 	/* Reset pmacfg0 */
 	csr_write(CSR_MIPSPMACFG0, 0);
-	asm volatile("fence");
+	mb();
 
 	/* Per cluster set up */
 	if (cpu_core(hartid) == 0 && cpu_hart(hartid) == 0) {
 		/* Enable L2 prefetch */
-		asm volatile("sw %0,0(%1)"::"r"(0xfffff110),
-			      "r"(cm_base + L2_PFT_CONTROL_OFFSET));
-		asm volatile("sw %0,0(%1)"::"r"(0x15ff),
-			      "r"(cm_base + L2_PFT_CONTROL_B_OFFSET));
+		__raw_writel(0xfffff110,
+			     (void *)(cm_base + L2_PFT_CONTROL_OFFSET));
+		__raw_writel(0x15ff,
+			     (void *)(cm_base + L2_PFT_CONTROL_B_OFFSET));
 	}
 
 	/* Per core set up */
@@ -244,8 +247,8 @@ static int mips_p8700_nascent_init(void)
 		for (i = 0; i < 8; i++) {
 			csr_set(CSR_MIPSCONFIG8, 4 + 0x100 * i);
 			csr_set(CSR_MIPSCONFIG9, 8);
-			asm volatile("fence");
-			asm volatile("fence.i");
+			mb();
+			RISCV_FENCE_I;
 		}
 	}
 
