@@ -46,6 +46,7 @@
 				compatible = "opensbi,domain,memregion";
 				base = <0x0 0x0>;
 				order = <64>;
+				mmio;
 			};
 
 			tdomain: trusted-domain {
