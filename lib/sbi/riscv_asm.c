@@ -311,8 +311,7 @@ int is_pmp_entry_mapped(unsigned long entry)
 }
 
 #ifdef CONFIG_PLATFORM_MIPS_P8700
-extern unsigned long _fw_start;
-static void pma_set(unsigned int n, unsigned long addr)
+static void pma_set(unsigned int n, unsigned long prot, unsigned long addr)
 {
 	int pmacfg_csr, pmacfg_shift;
 	unsigned long cfgmask;
@@ -323,13 +322,11 @@ static void pma_set(unsigned int n, unsigned long addr)
 	cfgmask = ~(0xffUL << pmacfg_shift);
 
 	/* Read pmacfg to change cacheability */
-        pmacfg  = (csr_read_num(pmacfg_csr) & cfgmask);
-        if (addr >= (unsigned long)&_fw_start)
-                cca = CCA_CACHE_ENABLE | PMA_SPECULATION;
-        else
-                cca = CCA_CACHE_DISABLE;
-        pmacfg |= ((cca << pmacfg_shift) & ~cfgmask);
-        csr_write_num(pmacfg_csr, pmacfg);
+	pmacfg  = (csr_read_num(pmacfg_csr) & cfgmask);
+	cca = (prot & PMP_MMIO) ? CCA_CACHE_DISABLE : CCA_CACHE_ENABLE | PMA_SPECULATION;
+
+	pmacfg |= ((cca << pmacfg_shift) & ~cfgmask);
+	csr_write_num(pmacfg_csr, pmacfg);
 }
 #endif
 
@@ -345,7 +342,7 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 		return SBI_EINVAL;
 
 #ifdef CONFIG_PLATFORM_MIPS_P8700
-	pma_set(n, addr);
+	pma_set(n, prot, addr);
 #endif
 
 	/* calculate PMP register and offset */
