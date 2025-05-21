@@ -215,6 +215,8 @@ int pmp_disable(unsigned int n);
 /* Check if the matching field is set */
 int is_pmp_entry_mapped(unsigned long entry);
 
+#define PMP_MMIO   _UL(0x100)
+
 int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	    unsigned long log2len);
 

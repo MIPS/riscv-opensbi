@@ -361,6 +361,13 @@ static unsigned int sbi_hart_get_smepmp_flags(struct sbi_scratch *scratch,
 			pmp_flags |= PMP_X;
 	}
 
+	/*
+	 * indicate whether it is MMIO, to be evaluated by code,
+	 * out of pmpcfg mask
+	 */
+	if (reg->flags & SBI_DOMAIN_MEMREGION_MMIO)
+		pmp_flags |= PMP_MMIO;
+
 	return pmp_flags;
 }
 
@@ -489,6 +496,12 @@ static int sbi_hart_oldpmp_configure(struct sbi_scratch *scratch,
 			pmp_flags |= PMP_W;
 		if (reg->flags & SBI_DOMAIN_MEMREGION_SU_EXECUTABLE)
 			pmp_flags |= PMP_X;
+		/*
+		 * indicate whether it is MMIO, to be evaluated by code,
+		 * out of pmpcfg mask
+		 */
+		if (reg->flags & SBI_DOMAIN_MEMREGION_MMIO)
+			pmp_flags |= PMP_MMIO;
 
 		pmp_addr = reg->base >> PMP_SHIFT;
 		if (pmp_log2gran <= reg->order && pmp_addr < pmp_addr_max) {
