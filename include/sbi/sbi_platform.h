@@ -142,6 +142,9 @@ struct sbi_platform_operations {
 	/** platform specific handler to fixup store fault */
 	int (*emulate_store)(int wlen, unsigned long addr,
 			     union sbi_ldst_data in_val);
+
+	/** platform specific pma set up */
+	void (*pma_set)(unsigned int n, unsigned long prot, unsigned long addr);
 };
 
 /** Platform default per-HART stack size for exception/interrupt handling */
@@ -642,6 +645,22 @@ static inline int sbi_platform_emulate_store(const struct sbi_platform *plat,
 							     in_val);
 	}
 	return SBI_ENOTSUPP;
+}
+
+/**
+ * PMA set up for cacheability based on the corresponding PMP
+ *
+ * @param plat pointer to struct sbi_platform
+ * @param n index of the pmp/pma entry
+ * @param prot attribute of the pmp entry
+ * @param addr address of the pmp entry
+ */
+static inline void sbi_platform_pma_set(const struct sbi_platform *plat,
+					unsigned int n, unsigned long prot,
+					unsigned long addr)
+{
+	if (plat && sbi_platform_ops(plat)->pma_set)
+		sbi_platform_ops(plat)->pma_set(n, prot, addr);
 }
 
 #endif

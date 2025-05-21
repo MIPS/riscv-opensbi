@@ -312,6 +312,9 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	if (n >= PMP_COUNT || log2len > __riscv_xlen || log2len < PMP_SHIFT)
 		return SBI_EINVAL;
 
+	/* Allow the platform to set up PMA if needed */
+	sbi_platform_pma_set(sbi_platform_thishart_ptr(), n, prot, addr);
+
 	/* calculate PMP register and offset */
 #if __riscv_xlen == 32
 	pmpcfg_csr   = CSR_PMPCFG0 + (n >> 2);
