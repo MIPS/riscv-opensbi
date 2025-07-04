@@ -140,6 +140,22 @@ static void power_up_other_cluster(u32 hartid)
 }
 #endif
 
+static void __attribute__((naked,no_instrument_function,aligned(4096)))
+mips_warm_boot(void)
+{
+  __asm__ __volatile__(
+	"	j	1f\n"
+	"	.align	2\n"
+	"	j	1f\n"
+	"	.align	2\n"
+	"	j	1f\n"
+	"	.align	2\n"
+	"	j	1f\n"
+	"1:	lla	t0, _start_warm\n"
+	"	jr	t0\n"
+	);
+}
+
 static int mips_hart_start(u32 hartid, ulong saddr)
 {
 	unsigned int stat;
@@ -149,6 +165,9 @@ static int mips_hart_start(u32 hartid, ulong saddr)
 	/* Hart 0 is the boot hart, and we don't use the CPC cmd to start.  */
 	if (hartid == 0)
 		return SBI_ENOTSUPP;
+
+	/* Change reset base to mips_warm_boot */
+	write_gcr_co_reset_base(hartid, (unsigned long)mips_warm_boot, local_p);
 
 	if (cpu_hart(hartid) == 0) {
 		/* Ensure its coherency is disabled */
