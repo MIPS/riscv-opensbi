@@ -69,6 +69,9 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
+
 			status = "okay";
 			reg = <0x00000000>;
 
@@ -86,6 +89,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000001>;
 
@@ -103,6 +108,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000010>;
 
@@ -120,6 +127,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000011>;
 
@@ -137,6 +146,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000020>;
 
@@ -154,6 +165,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000021>;
 
@@ -171,6 +184,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000030>;
 
@@ -188,6 +203,8 @@
 			opensbi-domain = <&tdomain>;
 			mmu-type = "riscv,sv39";
 			riscv,isa = "rv64imafdcsu";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicntr", "zicsr", "zifencei", "zihpm", "xmipsexectl";
 			status = "okay";
 			reg = <0x00000031>;
 
