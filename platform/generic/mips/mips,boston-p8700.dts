@@ -11,6 +11,7 @@
 #define APLIC_M_BASE (CM_BASE + 0x40000)
 #define APLIC_S_BASE (CM_BASE + 0x60000)
 #define MSWI_BASE (CM_BASE + 0x50000)
+#define SSWI_BASE (CM_BASE + 0x6c000)
 #define MTIMER_BASE (MSWI_BASE + 0x4000)
 #define CPC_TIMER (CM_BASE + 0x8050)
 
@@ -334,6 +335,7 @@
 			interrupts-extended = <&cpu0_intc 9>, <&cpu1_intc 9>, <&cpu2_intc 9>, <&cpu3_intc 9>, <&cpu4_intc 9>, <&cpu5_intc 9>, <&cpu6_intc 9>, <&cpu7_intc 9>;
 			reg = <APLIC_S_BASE 0x00008000>;
 			riscv,num-sources = <0x00000035>;
+			riscv,hart-indexes = <0x00 0x01 0x10 0x11 0x20 0x21 0x30 0x31>;
 		};
 
 		aplic_m0: interrupt-controller@16140000 {
@@ -345,6 +347,7 @@
 			interrupts-extended = <&cpu0_intc 11>, <&cpu1_intc 11>, <&cpu2_intc 11>, <&cpu3_intc 11>, <&cpu4_intc 11>, <&cpu5_intc 11>, <&cpu6_intc 11>, <&cpu7_intc 11>;
 			reg = <APLIC_M_BASE 0x00008000>;
 			riscv,num-sources = <0x00000035>;
+			riscv,hart-indexes = <0x00 0x01 0x10 0x11 0x20 0x21 0x30 0x31>;
 		};
 
 		mswi0: interrupt-controller@16150000 {
@@ -353,7 +356,19 @@
 			reg = <MSWI_BASE 0x10000>;
 			interrupt-controller;
 			#interrupt-cells = <0>;
+			riscv,hart-indexes = <0x00 0x01 0x10 0x11 0x20 0x21 0x30 0x31>;
 		};
+
+/*
+		sswi0: interrupt-controller@1616c000 {
+			compatible = "mips,p8700-aclint-sswi";
+			interrupts-extended = <&cpu0_intc 1>, <&cpu1_intc 1>, <&cpu2_intc 1>, <&cpu3_intc 1>, <&cpu4_intc 1>, <&cpu5_intc 1>, <&cpu6_intc 1>, <&cpu7_intc 1>;
+			reg = <SSWI_BASE 0x4000>;
+			interrupt-controller;
+			#interrupt-cells = <0>;
+			riscv,hart-indexes = <0x00 0x01 0x10 0x11 0x20 0x21 0x30 0x31>;
+		};
+*/
 
 		mtimer0: timer@16154000 {
 			compatible = "riscv,aclint-mtimer";
