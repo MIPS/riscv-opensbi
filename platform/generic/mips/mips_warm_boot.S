@@ -10,3 +10,11 @@
 mips_warm_boot:
 	j	_start_warm
 	.align	2
+nmi_vector:
+	j	_start_hang
+	.align	2
+cacheerr_vector:
+	j	_start_hang
+	.align	2
+debugexc_vector:
+	j	_start_hang
