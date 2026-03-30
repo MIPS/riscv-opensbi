@@ -25,7 +25,7 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 	model = "MIPS P8700";
-	compatible = "mips,p8700";
+	compatible = "mips,p8700", "mips,p8700-boston";
 
 	chosen {
 		stdout-path = &uart0;
