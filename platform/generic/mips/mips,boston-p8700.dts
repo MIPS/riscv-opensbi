@@ -32,7 +32,7 @@
 		// For Qemu
 		//bootargs = "root=/dev/sda rw earlycon console=ttyS0,115200n8r";
 		// For a Boston board
-		bootargs = "root=/dev/mmcblk0p5 rw rootwait earlycon console=ttyS0,115200n8r";
+		bootargs = "root=PARTUUID=00042f90-05 rw rootwait earlycon console=ttyS0,115200n8r";
 
 		opensbi-domains {
 			compatible = "opensbi,domain,config";
